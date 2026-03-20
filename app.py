@@ -15,75 +15,77 @@ if file:
     df = pd.read_csv(file)
 
     # Clean column names
-    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+    df.columns = df.columns.str.strip()
 
-    st.write("📌 Columns in Dataset:", df.columns)
+    st.write("📌 Columns in Dataset:")
+    st.write(df.columns)
 
-    # Function to find column by keyword
-    def find_col(keywords):
-        for col in df.columns:
-            for key in keywords:
-                if key in col:
-                    return col
-        return None
+    st.subheader("🔧 Select Columns")
 
-    # Auto-detect columns
-    displacement = find_col(["displacement"])
-    horsepower = find_col(["horse", "hp"])
-    weight = find_col(["weight"])
-    acceleration = find_col(["acceleration", "acc"])
-    mpg = find_col(["mpg", "miles"])
+    # User selects columns manually
+    target = st.selectbox("Select Target (MPG)", df.columns)
 
-    # Check if all required columns found
-    if None in [displacement, horsepower, weight, acceleration, mpg]:
-        st.error("❌ Could not detect required columns.")
-        st.write("👉 Please check your dataset column names above.")
-        st.stop()
+    feature1 = st.selectbox("Feature 1 (Displacement)", df.columns)
+    feature2 = st.selectbox("Feature 2 (Horsepower)", df.columns)
+    feature3 = st.selectbox("Feature 3 (Weight)", df.columns)
+    feature4 = st.selectbox("Feature 4 (Acceleration)", df.columns)
 
-    # Prepare data
-    X = df[[displacement, horsepower, weight, acceleration]]
-    y = df[mpg]
+    if st.button("Train Model"):
+        try:
+            X = df[[feature1, feature2, feature3, feature4]]
+            y = df[target]
 
-    # Handle missing values
-    X = X.fillna(X.mean())
-    y = y.fillna(y.mean())
+            # Handle missing values
+            X = X.fillna(X.mean(numeric_only=True))
+            y = y.fillna(y.mean())
 
-    # Split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+            # Split
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-    # Polynomial features
-    poly = PolynomialFeatures(degree=2)
-    X_train = poly.fit_transform(X_train)
-    X_test = poly.transform(X_test)
+            # Polynomial transformation
+            poly = PolynomialFeatures(degree=2)
+            X_train = poly.fit_transform(X_train)
+            X_test = poly.transform(X_test)
 
-    # Model
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+            # Model
+            model = LinearRegression()
+            model.fit(X_train, y_train)
 
-    # Predict
-    y_pred = model.predict(X_test)
+            # Prediction
+            y_pred = model.predict(X_test)
 
-    # Plot
-    st.subheader("📉 Actual vs Predicted MPG")
-    fig, ax = plt.subplots()
-    ax.scatter(y_test, y_pred)
-    ax.set_xlabel("Actual MPG")
-    ax.set_ylabel("Predicted MPG")
-    st.pyplot(fig)
+            # Plot
+            st.subheader("📉 Actual vs Predicted MPG")
+            fig, ax = plt.subplots()
+            ax.scatter(y_test, y_pred)
+            ax.set_xlabel("Actual")
+            ax.set_ylabel("Predicted")
+            st.pyplot(fig)
 
-    # User input
-    st.subheader("🔮 Predict MPG")
+            # Store model for prediction
+            st.session_state["model"] = model
+            st.session_state["poly"] = poly
+            st.session_state["features"] = [feature1, feature2, feature3, feature4]
 
-    d = st.number_input("Displacement", value=200.0)
-    h = st.number_input("Horsepower", value=100.0)
-    w = st.number_input("Weight", value=3000.0)
-    a = st.number_input("Acceleration", value=15.0)
+            st.success("✅ Model trained successfully!")
 
-    if st.button("Predict"):
-        data = np.array([[d, h, w, a]])
-        data = poly.transform(data)
-        result = model.predict(data)
-        st.success(f"🚘 Predicted MPG: {result[0]:.2f}")
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+    # Prediction section
+    if "model" in st.session_state:
+        st.subheader("🔮 Predict MPG")
+
+        f1 = st.number_input("Feature 1 value")
+        f2 = st.number_input("Feature 2 value")
+        f3 = st.number_input("Feature 3 value")
+        f4 = st.number_input("Feature 4 value")
+
+        if st.button("Predict MPG"):
+            data = np.array([[f1, f2, f3, f4]])
+            data = st.session_state["poly"].transform(data)
+            result = st.session_state["model"].predict(data)
+            st.success(f"🚘 Predicted MPG: {result[0]:.2f}")
 
 else:
     st.info("Please upload dataset to continue.")
