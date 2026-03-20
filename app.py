@@ -14,12 +14,22 @@ file = st.file_uploader("Upload CSV", type=["csv"])
 if file:
     df = pd.read_csv(file)
 
-    # Fix column names
-    df.columns = df.columns.str.lower()
+    # Clean column names
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
-    st.write("Columns:", df.columns)
+    st.write("Columns in dataset:", df.columns)
 
-    # Select correct columns
+    # Required columns
+    required = ['displacement', 'horsepower', 'weight', 'acceleration', 'mpg']
+
+    # Check if columns exist
+    missing = [col for col in required if col not in df.columns]
+
+    if missing:
+        st.error(f"Missing columns: {missing}")
+        st.stop()
+
+    # Continue if no error
     X = df[['displacement', 'horsepower', 'weight', 'acceleration']]
     y = df['mpg']
 
@@ -50,3 +60,6 @@ if file:
         data = poly.transform(data)
         result = model.predict(data)
         st.success(f"MPG: {result[0]:.2f}")
+
+else:
+    st.write("Upload dataset")
